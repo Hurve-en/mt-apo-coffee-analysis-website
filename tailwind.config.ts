@@ -1,6 +1,7 @@
-﻿import type { Config } from 'tailwindcss'
+﻿// Note: avoid importing `tailwindcss` types here to prevent TypeScript errors
+// when dependencies are not yet installed. Use an untyped `config` value.
 
-const config: Config = {
+const config = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
