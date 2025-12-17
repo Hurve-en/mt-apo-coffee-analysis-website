@@ -1,4 +1,4 @@
-# Cafe Website Analysis
+# Coffee Business Website Analysis
 
 A comprehensive, full-stack business analytics platform designed specifically for coffee ventures. Track sales, manage customers, analyze product performance, and make data-driven decisions to grow your coffee business.
 
