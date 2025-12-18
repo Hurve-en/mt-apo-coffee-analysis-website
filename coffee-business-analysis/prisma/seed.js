@@ -26,18 +26,18 @@ async function main() {
   console.log('✅ Created 3 products')
   
   // Create customers
-  const sarah = await prisma.customer.create({
-    data: { name: 'Sarah Johnson', email: 'sarah@email.com', phone: '+1-555-0101', totalSpent: 0, visitCount: 0, loyaltyPoints: 0 }
+  const rheynel = await prisma.customer.create({
+    data: { name: 'Rheynel', email: 'rheynel@email.com', phone: '+1-555-0101', totalSpent: 0, visitCount: 0, loyaltyPoints: 0 }
   })
-  const michael = await prisma.customer.create({
-    data: { name: 'Michael Chen', email: 'mchen@email.com', phone: '+1-555-0102', totalSpent: 0, visitCount: 0, loyaltyPoints: 0 }
+  const keziah = await prisma.customer.create({
+    data: { name: 'Keziah', email: 'keziah@email.com', phone: '+1-555-0102', totalSpent: 0, visitCount: 0, loyaltyPoints: 0 }
   })
   console.log('✅ Created 2 customers')
   
   // Create 5 orders
   for (let i = 0; i < 5; i++) {
     const products = [espresso, cappuccino, latte]
-    const customers = [sarah, michael]
+    const customers = [rheynel, keziah]
     const product = products[Math.floor(Math.random() * products.length)]
     const customer = customers[Math.floor(Math.random() * customers.length)]
     const quantity = Math.floor(Math.random() * 2) + 1
