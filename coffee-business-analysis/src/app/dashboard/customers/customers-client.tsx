@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils'
-import { Users, Star, TrendingUp, Mail, Phone, ShoppingBag, Search } from 'lucide-react'
+import { Users, Star, TrendingUp, Mail, Phone, ShoppingBag, Search, Plus, Edit, Trash2 } from 'lucide-react'
+import { CustomerModal } from '@/components/modals/customer-modal'
 
 interface Customer {
   id: string
   name: string
   email: string
   phone: string | null
+  address: string | null
   totalSpent: number
   visitCount: number
   loyaltyPoints: number
@@ -31,6 +33,9 @@ interface CustomersPageProps {
 export default function CustomersPageClient({ initialCustomers, stats }: CustomersPageProps) {
   const [customers, setCustomers] = useState(initialCustomers)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [loading, setLoading] = useState(false)
 
   // Filter customers based on search query
   useEffect(() => {
@@ -47,14 +52,108 @@ export default function CustomersPageClient({ initialCustomers, stats }: Custome
     }
   }, [searchQuery, initialCustomers])
 
+  // Handle create/update
+  const handleSave = async (customerData: any) => {
+    setLoading(true)
+    
+    try {
+      const isEditing = !!customerData.id
+      const method = isEditing ? 'PUT' : 'POST'
+      
+      const response = await fetch('/api/customers', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customerData)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save customer')
+      }
+
+      alert(isEditing ? 'Customer updated successfully!' : 'Customer added successfully!')
+      
+      // Reload the page to refresh all data
+      window.location.reload()
+      
+    } catch (error: any) {
+      console.error('Error saving customer:', error)
+      alert(error.message || 'Failed to save customer. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle delete
+  const handleDelete = async (customerId: string, customerName: string, orderCount: number) => {
+    if (orderCount > 0) {
+      alert(`Cannot delete ${customerName}. This customer has ${orderCount} existing orders. Delete the orders first.`)
+      return
+    }
+
+    if (!confirm(`Are you sure you want to delete "${customerName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch(`/api/customers?id=${customerId}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete customer')
+      }
+
+      alert('Customer deleted successfully!')
+      
+      // Reload the page
+      window.location.reload()
+      
+    } catch (error: any) {
+      console.error('Error deleting customer:', error)
+      alert(error.message || 'Failed to delete customer. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Open modal for editing
+  const handleEdit = (customer: Customer) => {
+    setEditingCustomer(customer)
+    setIsModalOpen(true)
+  }
+
+  // Open modal for adding
+  const handleAdd = () => {
+    setEditingCustomer(null)
+    setIsModalOpen(true)
+  }
+
   return (
     <div className="space-y-8">
       
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
-        <p className="mt-2 text-gray-600">
-          Manage your customer relationships and track loyalty.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
+          <p className="mt-2 text-gray-600">
+            Manage your customer relationships and track loyalty.
+          </p>
+        </div>
+        
+        {/* ADD CUSTOMER BUTTON */}
+        <button
+          onClick={handleAdd}
+          disabled={loading}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-900 text-white rounded-xl font-semibold hover:from-slate-800 hover:to-slate-950 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Plus className="w-5 h-5" />
+          Add Customer
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -69,7 +168,7 @@ export default function CustomersPageClient({ initialCustomers, stats }: Custome
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">All Customers</h2>
           
-          {/* SEARCH BAR - NEW! */}
+          {/* SEARCH BAR */}
           <div className="relative w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -110,6 +209,7 @@ export default function CustomersPageClient({ initialCustomers, stats }: Custome
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loyalty Points</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -176,6 +276,28 @@ export default function CustomersPageClient({ initialCustomers, stats }: Custome
                         </span>
                       )}
                     </td>
+                    
+                    {/* ACTION BUTTONS */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEdit(customer)}
+                          disabled={loading}
+                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors disabled:opacity-50"
+                          title="Edit customer"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(customer.id, customer.name, customer._count.orders)}
+                          disabled={loading}
+                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50"
+                          title="Delete customer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
@@ -232,6 +354,17 @@ export default function CustomersPageClient({ initialCustomers, stats }: Custome
           </div>
         </div>
       </div>
+
+      {/* CUSTOMER MODAL */}
+      <CustomerModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingCustomer(null)
+        }}
+        onSave={handleSave}
+        customer={editingCustomer}
+      />
 
     </div>
   )
