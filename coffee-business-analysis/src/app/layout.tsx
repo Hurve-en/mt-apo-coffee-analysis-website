@@ -6,8 +6,8 @@ import { Toaster } from 'react-hot-toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CITA - Coffee Business Analytics',
-  description: 'Comprehensive analytics platform for coffee businesses built by CITA',
+  title: "CITA - Coffee Business Analytics",
+  description: "Comprehensive analytics platform for coffee businesses built by CITA",
   keywords: ['coffee', 'business', 'analytics', 'dashboard', 'CITA'],
 }
 
