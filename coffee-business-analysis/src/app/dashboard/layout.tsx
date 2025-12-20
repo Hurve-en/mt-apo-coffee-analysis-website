@@ -27,6 +27,7 @@ import {
   TrendingUp, 
   Users, 
   Coffee, 
+  ShoppingCart,  // ← ADD THIS LINE
   FileText,
   Menu,
   X,
@@ -67,6 +68,11 @@ const navigation = [
     href: '/dashboard/products',
     icon: Coffee,
   },
+  {
+    name: 'Orders',           // ← ADD THESE
+    href: '/dashboard/orders', // ← 4 LINES
+    icon: ShoppingCart,        // ← HERE
+  },                           // ←
   {
     name: 'Reports',
     href: '/dashboard/reports',
