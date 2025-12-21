@@ -3,7 +3,7 @@
  * 
  * DELETE /api/customers/clear
  * 
- * Deletes ALL customers from database
+ * Deletes ALL orders first, then all customers
  */
 
 import { NextResponse } from 'next/server'
@@ -11,12 +11,18 @@ import { prisma } from '@/lib/prisma'
 
 export async function DELETE() {
   try {
-    // Delete all customers (orders will be handled by cascade)
+    // Step 1: Delete all order items first (related to orders)
+    await prisma.orderItem.deleteMany({})
+    
+    // Step 2: Delete all orders
+    await prisma.order.deleteMany({})
+    
+    // Step 3: Delete all customers
     const result = await prisma.customer.deleteMany({})
     
     return NextResponse.json({ 
       success: true, 
-      message: `Deleted ${result.count} customers`,
+      message: `Deleted all orders and ${result.count} customers`,
       count: result.count 
     })
 
