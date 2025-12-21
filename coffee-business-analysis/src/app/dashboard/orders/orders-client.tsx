@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { ShoppingCart, Package, Clock, CheckCircle, Plus, Trash2, Calendar } from 'lucide-react'
+import { ShoppingCart, Package, Clock, CheckCircle, Plus, Trash2, Calendar, Download, Upload } from 'lucide-react'
 import { OrderModal } from '@/components/modals/order-modal'
+import { ImportModal } from '@/components/modals/import-modal'
+import { convertToCSV, downloadCSV, validateOrderCSV } from '@/lib/csv-utils'
 import toast from 'react-hot-toast'
 
 interface OrderItem {
@@ -60,6 +62,7 @@ interface OrdersPageProps {
 export default function OrdersPageClient({ initialOrders, customers, products, stats }: OrdersPageProps) {
   const [orders, setOrders] = useState(initialOrders)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSave = async (orderData: any) => {
@@ -161,6 +164,45 @@ export default function OrdersPageClient({ initialOrders, customers, products, s
     }
   }
 
+  // EXPORT TO CSV
+  const handleExport = () => {
+    const exportData = orders.flatMap(order => 
+      order.items.map(item => ({
+        orderDate: formatDate(order.orderDate, 'short'),
+        customerEmail: order.customer.email,
+        customerName: order.customer.name,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity,
+        paymentMethod: order.paymentMethod,
+        status: order.status
+      }))
+    )
+
+    const headers = ['orderDate', 'customerEmail', 'customerName', 'productName', 'quantity', 'price', 'total', 'paymentMethod', 'status']
+    const csv = convertToCSV(exportData, headers)
+    downloadCSV(csv, `orders-${new Date().toISOString().split('T')[0]}.csv`)
+    
+    toast.success('✅ Orders exported successfully!')
+  }
+
+  // IMPORT FROM CSV
+  const handleImport = async (data: any[]) => {
+    const response = await fetch('/api/orders/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orders: data })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Import failed')
+    }
+
+    return response.json()
+  }
+
   return (
     <div className="space-y-8">
       
@@ -170,14 +212,35 @@ export default function OrdersPageClient({ initialOrders, customers, products, s
           <p className="mt-2 text-gray-600">Manage customer orders and track fulfillment.</p>
         </div>
         
-        <button
-          onClick={() => setIsModalOpen(true)}
-          disabled={loading}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-900 text-white rounded-xl font-semibold hover:from-slate-800 hover:to-slate-950 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus className="w-5 h-5" />
-          Create Order
-        </button>
+        {/* ACTION BUTTONS */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleExport}
+            disabled={loading || orders.length === 0}
+            className="flex items-center gap-2 px-4 py-3 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-5 h-5" />
+            Export
+          </button>
+          
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-3 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Upload className="w-5 h-5" />
+            Import
+          </button>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            disabled={loading}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-900 text-white rounded-xl font-semibold hover:from-slate-800 hover:to-slate-950 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus className="w-5 h-5" />
+            Create Order
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -291,12 +354,23 @@ export default function OrdersPageClient({ initialOrders, customers, products, s
         )}
       </div>
 
+      {/* MODALS */}
       <OrderModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
         customers={customers}
         products={products}
+      />
+
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title="Import Orders"
+        templateHeaders={['customerEmail', 'productName', 'quantity', 'orderDate', 'paymentMethod', 'status']}
+        validateFn={validateOrderCSV}
+        importFn={handleImport}
+        exampleRow="keziah@email.com,Espresso,2,2025-12-26,cash,completed"
       />
 
     </div>
