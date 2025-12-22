@@ -1,15 +1,20 @@
 /**
- * CUSTOMERS BULK IMPORT API
- * 
- * Imports customers with ZERO stats
- * Stats will be calculated when orders are imported!
+ * CUSTOMERS IMPORT API - WITH AUTH
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { customers } = body
 
@@ -28,9 +33,12 @@ export async function POST(request: NextRequest) {
 
     for (const customer of customers) {
       try {
-        // Check if email already exists
-        const existing = await prisma.customer.findUnique({
-          where: { email: customer.email }
+        // Check if email exists for THIS USER
+        const existing = await prisma.customer.findFirst({
+          where: { 
+            email: customer.email,
+            userId: session.user.id
+          }
         })
 
         if (existing) {
@@ -39,17 +47,18 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Create customer with DEFAULT stats (will be updated by orders)
+        // Create customer for THIS USER
         await prisma.customer.create({
           data: {
+            userId: session.user.id,
             name: customer.name,
             email: customer.email,
             phone: customer.phone || null,
             address: customer.address || null,
-            totalSpent: 0,        // Starts at 0
-            visitCount: 0,        // Starts at 0
-            loyaltyPoints: 0,     // Starts at 0
-            lastVisit: null       // No visits yet
+            totalSpent: 0,
+            visitCount: 0,
+            loyaltyPoints: 0,
+            lastVisit: null
           }
         })
 

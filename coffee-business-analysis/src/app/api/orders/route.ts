@@ -1,5 +1,5 @@
 /**
- * ORDERS API ROUTE
+ * ORDERS API - WITH MULTI-TENANT AUTH
  * 
  * Handles all CRUD operations for orders
  * Can be used by external apps in the future!
@@ -12,16 +12,23 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// GET - Fetch all orders
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const customerId = searchParams.get('customerId')
     const status = searchParams.get('status')
     
-    const where: any = {}
+    const where: any = { userId: session.user.id }
     if (customerId) where.customerId = customerId
     if (status) where.status = status
 
@@ -47,19 +54,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(orders)
   } catch (error) {
     console.error('Error fetching orders:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch orders' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
   }
 }
 
-// POST - Create new order
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     
-    // Validation
     if (!body.customerId || !body.items || body.items.length === 0) {
       return NextResponse.json(
         { error: 'Customer and items are required' },
@@ -67,37 +75,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify customer exists
-    const customer = await prisma.customer.findUnique({
-      where: { id: body.customerId }
+    // Verify customer belongs to user
+    const customer = await prisma.customer.findFirst({
+      where: { 
+        id: body.customerId,
+        userId: session.user.id
+      }
     })
 
     if (!customer) {
-      return NextResponse.json(
-        { error: 'Customer not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
-    // Verify all products exist and calculate total
     let total = 0
     const itemsData = []
 
     for (const item of body.items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId }
+      // Verify product belongs to user
+      const product = await prisma.product.findFirst({
+        where: { 
+          id: item.productId,
+          userId: session.user.id
+        }
       })
 
       if (!product) {
-        return NextResponse.json(
-          { error: `Product ${item.productId} not found` },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: `Product ${item.productId} not found` }, { status: 404 })
       }
 
       if (product.stock < item.quantity) {
         return NextResponse.json(
-          { error: `Insufficient stock for ${product.name}. Available: ${product.stock}` },
+          { error: `Insufficient stock for ${product.name}` },
           { status: 400 }
         )
       }
@@ -112,9 +120,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create order with items
     const order = await prisma.order.create({
       data: {
+        userId: session.user.id,
         customerId: body.customerId,
         total,
         status: body.status || 'pending',
@@ -166,23 +174,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(order, { status: 201 })
   } catch (error) {
     console.error('Error creating order:', error)
-    return NextResponse.json(
-      { error: 'Failed to create order' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
   }
 }
 
-// PUT - Update order status
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     
     if (!body.id) {
-      return NextResponse.json(
-        { error: 'Order ID is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 })
+    }
+
+    const existing = await prisma.order.findFirst({
+      where: { 
+        id: body.id,
+        userId: session.user.id
+      }
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Order not found or access denied' }, { status: 404 })
     }
 
     const order = await prisma.order.update({
@@ -203,39 +221,37 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(order)
   } catch (error) {
     console.error('Error updating order:', error)
-    return NextResponse.json(
-      { error: 'Failed to update order' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
   }
 }
 
-// DELETE - Delete order
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
     if (!id) {
-      return NextResponse.json(
-        { error: 'Order ID is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 })
     }
 
-    // Get order details before deleting
-    const order = await prisma.order.findUnique({
-      where: { id },
+    const order = await prisma.order.findFirst({
+      where: { 
+        id,
+        userId: session.user.id
+      },
       include: {
         items: true
       }
     })
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Order not found or access denied' }, { status: 404 })
     }
 
     // Restore product stock
@@ -266,17 +282,11 @@ export async function DELETE(request: NextRequest) {
       }
     })
 
-    // Delete order (items will be deleted automatically due to cascade)
-    await prisma.order.delete({
-      where: { id }
-    })
+    await prisma.order.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting order:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete order' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 })
   }
 }

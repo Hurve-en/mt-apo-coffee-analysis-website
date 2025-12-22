@@ -1,16 +1,20 @@
 /**
- * PRODUCTS BULK IMPORT API
- * 
- * POST /api/products/import
- * 
- * Accepts CSV data and bulk creates products
+ * PRODUCTS IMPORT API - WITH AUTH
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { products } = body
 
@@ -29,9 +33,10 @@ export async function POST(request: NextRequest) {
 
     for (const product of products) {
       try {
-        // Create product
+        // Create product for THIS USER
         await prisma.product.create({
           data: {
+            userId: session.user.id,
             name: product.name,
             description: product.description || null,
             category: product.category,

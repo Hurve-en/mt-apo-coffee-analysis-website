@@ -1,17 +1,20 @@
 /**
- * ORDERS BULK IMPORT API
- * 
- * POST /api/orders/import
- * 
- * Accepts CSV data and bulk creates orders
- * Automatically updates customer stats and product stock
+ * ORDERS IMPORT API - WITH AUTH
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { orders } = body
 
@@ -30,9 +33,12 @@ export async function POST(request: NextRequest) {
 
     for (const orderData of orders) {
       try {
-        // Find customer by email
-        const customer = await prisma.customer.findUnique({
-          where: { email: orderData.customerEmail }
+        // Find customer for THIS USER
+        const customer = await prisma.customer.findFirst({
+          where: { 
+            email: orderData.customerEmail,
+            userId: session.user.id
+          }
         })
 
         if (!customer) {
@@ -41,9 +47,12 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Find product by name
+        // Find product for THIS USER
         const product = await prisma.product.findFirst({
-          where: { name: orderData.productName }
+          where: { 
+            name: orderData.productName,
+            userId: session.user.id
+          }
         })
 
         if (!product) {
@@ -55,15 +64,15 @@ export async function POST(request: NextRequest) {
         const quantity = parseInt(orderData.quantity)
         const total = product.price * quantity
 
-        // Parse order date
         let orderDate = new Date()
         if (orderData.orderDate) {
           orderDate = new Date(orderData.orderDate)
         }
 
-        // Create order with items
+        // Create order for THIS USER
         await prisma.order.create({
           data: {
+            userId: session.user.id,
             customerId: customer.id,
             total: total,
             status: orderData.status || 'completed',
