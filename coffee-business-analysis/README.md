@@ -520,7 +520,9 @@ Have feedback? Want to contribute? Found a bug? We'd love to hear from you.
 
 Shoutout to the teams behind Next.js, Prisma, Tailwind CSS, Recharts, and Lucide Icons. We're standing on the shoulders of giants.
 
----
 
-**CITA** - Building tools that actually help  
-*Last Updated: December 2024*
+## Packages used for Authentication
+
+npm install next-auth@latest
+npm install bcryptjs
+npm install @types/bcryptjs --save-dev
