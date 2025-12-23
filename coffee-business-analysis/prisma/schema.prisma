@@ -1,4 +1,4 @@
-// This is your Prisma schema file with authentication support
+// OPTIMIZED PRISMA SCHEMA WITH PERFORMANCE INDEXES
 
 datasource db {
   provider = "postgresql"
@@ -9,19 +9,19 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// NEW: User model for authentication
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // Hashed password
+  password  String
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations - each user owns their data
   customers Customer[]
   products  Product[]
   orders    Order[]
+
+  @@index([email])
 }
 
 model Customer {
@@ -37,13 +37,15 @@ model Customer {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // NEW: Link to user (owner)
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   orders        Order[]
 
-  @@index([userId]) // Fast queries by user
+  @@index([userId])
+  @@index([userId, email])
+  @@index([userId, createdAt])
+  @@index([userId, totalSpent])
 }
 
 model Product {
@@ -59,13 +61,15 @@ model Product {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  // NEW: Link to user (owner)
   userId      String
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   orderItems  OrderItem[]
 
-  @@index([userId]) // Fast queries by user
+  @@index([userId])
+  @@index([userId, category])
+  @@index([userId, stock])
+  @@index([userId, isActive])
 }
 
 model Order {
@@ -77,7 +81,6 @@ model Order {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  // NEW: Link to user (owner)
   userId        String
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -86,8 +89,11 @@ model Order {
 
   items         OrderItem[]
 
-  @@index([userId]) // Fast queries by user
+  @@index([userId])
   @@index([customerId])
+  @@index([userId, orderDate])
+  @@index([userId, status])
+  @@index([customerId, orderDate])
 }
 
 model OrderItem {
