@@ -1,10 +1,9 @@
 'use client'
 
 /**
- * MONITORING DASHBOARD - BRANDED COLORS
+ * MONITORING DASHBOARD - FULLY FIXED
  * 
  * Replace: src/components/monitoring-dashboard.tsx
- * Matches website color scheme (slate instead of purple)
  */
 
 import { useState, useEffect } from 'react'
@@ -46,7 +45,7 @@ export function MonitoringDashboard() {
 
   return (
     <>
-      {/* Floating Button - Matches Website Colors */}
+      {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed top-20 right-4 z-40 p-2 bg-gradient-to-r from-slate-700 to-slate-900 text-white rounded-lg shadow-lg hover:from-slate-800 hover:to-slate-950 transition-all hover:scale-105"
@@ -60,7 +59,7 @@ export function MonitoringDashboard() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
             
-            {/* Header - Slate Gradient */}
+            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-slate-700 to-slate-900 text-white">
               <div>
                 <h2 className="text-2xl font-bold">📊 Monitoring Dashboard</h2>
@@ -74,7 +73,7 @@ export function MonitoringDashboard() {
               </button>
             </div>
 
-            {/* Tabs - Slate Active Color */}
+            {/* Tabs */}
             <div className="flex gap-2 p-4 border-b border-gray-200 bg-gray-50">
               <button
                 onClick={() => setActiveTab('performance')}
@@ -123,28 +122,36 @@ export function MonitoringDashboard() {
                       <div className="text-sm mt-1">Navigate around the app to collect metrics.</div>
                     </div>
                   ) : (
-                    Object.entries(stats).map(([name, data]: [string, any]) => (
-                      <div key={name} className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg border border-slate-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-gray-900">{name}</span>
-                          <span className="text-sm text-slate-600 bg-slate-100 px-2 py-1 rounded">{data.count} samples</span>
+                    Object.entries(stats).map(([name, data]: [string, any]) => {
+                      // Ensure data has valid properties
+                      const avg = typeof data?.avg === 'number' ? data.avg : 0
+                      const min = typeof data?.min === 'number' ? data.min : 0
+                      const max = typeof data?.max === 'number' ? data.max : 0
+                      const count = typeof data?.count === 'number' ? data.count : 0
+
+                      return (
+                        <div key={name} className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-gray-900">{name}</span>
+                            <span className="text-sm text-slate-600 bg-slate-100 px-2 py-1 rounded">{count} samples</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <div className="text-gray-600">Average</div>
+                              <div className="font-bold text-blue-600">{avg.toFixed(0)}ms</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-600">Min</div>
+                              <div className="font-bold text-green-600">{min.toFixed(0)}ms</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-600">Max</div>
+                              <div className="font-bold text-red-600">{max.toFixed(0)}ms</div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <div className="text-gray-600">Average</div>
-                            <div className="font-bold text-blue-600">{data.avg.toFixed(0)}ms</div>
-                          </div>
-                          <div>
-                            <div className="text-gray-600">Min</div>
-                            <div className="font-bold text-green-600">{data.min.toFixed(0)}ms</div>
-                          </div>
-                          <div>
-                            <div className="text-gray-600">Max</div>
-                            <div className="font-bold text-red-600">{data.max.toFixed(0)}ms</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                 </div>
               )}
@@ -183,11 +190,11 @@ export function MonitoringDashboard() {
                         stats.recent.map((error: any, i: number) => (
                           <div key={i} className="p-4 bg-red-50 rounded-lg border border-red-200">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="font-semibold text-red-900">{error.message}</span>
-                              <span className="text-xs px-2 py-1 bg-red-200 text-red-900 rounded font-medium">{error.severity}</span>
+                              <span className="font-semibold text-red-900">{error.message || 'Unknown error'}</span>
+                              <span className="text-xs px-2 py-1 bg-red-200 text-red-900 rounded font-medium">{error.severity || 'unknown'}</span>
                             </div>
                             <div className="text-sm text-gray-600">
-                              {new Date(error.timestamp).toLocaleTimeString()}
+                              {error.timestamp ? new Date(error.timestamp).toLocaleTimeString() : 'Unknown time'}
                             </div>
                           </div>
                         ))
@@ -239,7 +246,7 @@ export function MonitoringDashboard() {
               )}
             </div>
 
-            {/* Footer - Slate Button */}
+            {/* Footer */}
             <div className="p-4 border-t border-gray-200 bg-gradient-to-br from-slate-50 to-gray-50 flex items-center justify-between">
               <span className="text-sm text-slate-600 flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
